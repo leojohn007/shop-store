@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Uploader API</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .upload-area {
+      border: 2px dashed #3B82F6;
+      transition: all 0.3s ease;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #2563EB;
+      background-color: rgba(59, 130, 246, 0.05);
+    }
+    .btn-primary {
+      background-color: #3B82F6;
+      transition: all 0.3s ease;
+    }
+    .btn-primary:hover {
+      background-color: #2563EB;
+    }
+    .image-card {
+      transition: all 0.3s ease;
+    }
+    .image-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .loader {
+      border-top-color: #3B82F6;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <header class="mb-8 text-center">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">Image Uploader API</h1>
+      <p class="text-gray-600">Upload, manage, and retrieve images with our simple API</p>
+    </header>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4">Try It Out</h2>
+      
+      <div id="auth-section" class="mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="font-medium mb-2">Register</h3>
+            <form id="register-form">
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input type="text" id="register-name" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="register-email" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="register-password" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+              </div>
+              <button type="submit" class="btn-primary text-white px-4 py-2 rounded-md w-full">Register</button>
+            </form>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h3 class="font-medium mb-2">Login</h3>
+            <form id="login-form">
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="login-email" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="login-password" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+              </div>
+              <button type="submit" class="btn-primary text-white px-4 py-2 rounded-md w-full">Login</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div id="upload-section" class="hidden mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="font-medium mb-2">Upload Image File</h3>
+            <form id="file-upload-form">
+              <div class="upload-area p-8 rounded-lg text-center mb-3" id="drop-area">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-1 text-sm text-gray-600">Drag and drop an image here, or click to select a file</p>
+                <input id="file-input" type="file" accept="image/*" class="hidden">
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
+                <input type="text" id="file-name" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <textarea id="file-description" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                <input type="text" id="file-tags" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="tag1, tag2, tag3">
+              </div>
+              <button type="submit" class="btn-primary text-white px-4 py-2 rounded-md w-full">Upload Image</button>
+            </form>
+          </div>
+          
+          <div>
+            <h3 class="font-medium mb-2">Upload Image from URL</h3>
+            <form id="url-upload-form">
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <input type="url" id="image-url" class="w-full px-3 py-2 border border-gray-300 rounded-md" required>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name (optional)</label>
+                <input type="text" id="url-name" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <textarea id="url-description" class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                <input type="text" id="url-tags" class="w-full px-3 py-2 border border-gray-300 rounded-md" placeholder="tag1, tag2, tag3">
+              </div>
+              <button type="submit" class="btn-primary text-white px-4 py-2 rounded-md w-full">Upload from URL</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <div id="loading" class="hidden flex justify-center my-8">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12"></div>
+      </div>
+      
+      <div id="message" class="hidden my-4 p-4 rounded-md"></div>
+      
+      <div id="images-section" class="hidden mt-8">
+        <h2 class="text-xl font-semibold mb-4">Your Images</h2>
+        <div id="images-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <div id="pagination" class="mt-6 flex justify-center space-x-2"></div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4">API Documentation</h2>
+      <div class="space-y-6">
+        <div>
+          <h3 class="font-medium text-lg mb-2">Authentication</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>POST /api/users/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123"
+}</code></pre>
+          </div>
+          <div class="bg-gray-100 p-3 rounded-md mt-2 overflow-x-auto">
+            <pre><code>POST /api/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}</code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-lg mb-2">Upload Image (File)</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>POST /api/images/upload
+Authorization: Bearer YOUR_TOKEN
+Content-Type: multipart/form-data
+
+Form data:
+- image: [File]
+- name: "My Image" (optional)
+- description: "Description here" (optional)
+- tags: "tag1,tag2,tag3" (optional)</code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-lg mb-2">Upload Image (URL)</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>POST /api/images/url
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "imageUrl": "https://example.com/image.jpg",
+  "name": "My Image", (optional)
+  "description": "Description here", (optional)
+  "tags": "tag1,tag2,tag3" (optional)
+}</code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-lg mb-2">Get Images</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>GET /api/images?page=1&limit=10&tags=tag1,tag2&search=keyword
+Authorization: Bearer YOUR_TOKEN</code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-lg mb-2">Get Single Image</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>GET /api/images/:id
+Authorization: Bearer YOUR_TOKEN</code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-lg mb-2">Update Image</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>PUT /api/images/:id
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "name": "Updated Name",
+  "description": "Updated Description",
+  "tags": "updated,tags"
+}</code></pre>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-lg mb-2">Delete Image</h3>
+          <div class="bg-gray-100 p-3 rounded-md overflow-x-auto">
+            <pre><code>DELETE /api/images/:id
+Authorization: Bearer YOUR_TOKEN</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Deployment Information</h2>
+      <p class="mb-4">This API can be deployed on Render.com using their free tier:</p>
+      <ol class="list-decimal list-inside space-y-2 mb-4">
+        <li>Create a new Web Service on Render</li>
+        <li>Connect your GitHub repository</li>
+        <li>Set the build command: <code class="bg-gray-100 px-2 py-1 rounded">npm install</code></li>
+        <li>Set the start command: <code class="bg-gray-100 px-2 py-1 rounded">node src/server.js</code></li>
+        <li>Add environment variables (MongoDB URI, JWT Secret, Cloudinary credentials)</li>
+      </ol>
+      <p>For MongoDB, you can use MongoDB Atlas free tier database hosting.</p>
+    </div>
+  </div>
+  
+  <footer class="bg-gray-800 text-white py-6 mt-8">
+    <div class="container mx-auto px-4 text-center">
+      <p>Image Upload API &copy; 2025. Built with Node.js, Express, MongoDB, and Cloudinary.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM Elements
+      const authSection = document.getElementById('auth-section');
+      const uploadSection = document.getElementById('upload-section');
+      const imagesSection = document.getElementById('images-section');
+      const messageEl = document.getElementById('message');
+      const loadingEl = document.getElementById('loading');
+      const imagesContainer = document.getElementById('images-container');
+      const paginationContainer = document.getElementById('pagination');
+      const registerForm = document.getElementById('register-form');
+      const loginForm = document.getElementById('login-form');
+      const fileUploadForm = document.getElementById('file-upload-form');
+      const urlUploadForm = document.getElementById('url-upload-form');
+      const dropArea = document.getElementById('drop-area');
+      const fileInput = document.getElementById('file-input');
+      
+      // API URL
+      const API_URL = window.location.origin;
+      let token = localStorage.getItem('token');
+      let currentPage = 1;
+      
+      // Check if user is logged in
+      function checkAuth() {
+        if (token) {
+          authSection.classList.add('hidden');
+          uploadSection.classList.remove('hidden');
+          fetchImages();
+        } else {
+          authSection.classList.remove('hidden');
+          uploadSection.classList.add('hidden');
+          imagesSection.classList.add('hidden');
+        }
+      }
+      
+      // Show message
+      function showMessage(msg, isError = false) {
+        messageEl.textContent = msg;
+        messageEl.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+        
+        if (isError) {
+          messageEl.classList.add('bg-red-100', 'text-red-800');
+        } else {
+          messageEl.classList.add('bg-green-100', 'text-green-800');
+        }
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+          messageEl.classList.add('hidden');
+        }, 5000);
+      }
+      
+      // Show loading
+      function toggleLoading(show) {
+        if (show) {
+          loadingEl.classList.remove('hidden');
+        } else {
+          loadingEl.classList.add('hidden');
+        }
+      }
+      
+      // Register form submit
+      registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('register-name').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        
+        try {
+          toggleLoading(true);
+          
+          const response = await fetch(`${API_URL}/api/users`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, email, password }),
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Registration failed');
+          }
+          
+          localStorage.setItem('token', data.token);
+          token = data.token;
+          showMessage('Registration successful');
+          registerForm.reset();
+          checkAuth();
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          toggleLoading(false);
+        }
+      });
+      
+      // Login form submit
+      loginForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        try {
+          toggleLoading(true);
+          
+          const response = await fetch(`${API_URL}/api/users/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Login failed');
+          }
+          
+          localStorage.setItem('token', data.token);
+          token = data.token;
+          showMessage('Login successful');
+          loginForm.reset();
+          checkAuth();
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          toggleLoading(false);
+        }
+      });
+      
+      // File upload form submit
+      fileUploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!fileInput.files[0]) {
+          showMessage('Please select an image file', true);
+          return;
+        }
+        
+        const formData = new FormData();
+        formData.append('image', fileInput.files[0]);
+        
+        const name = document.getElementById('file-name').value;
+        if (name) formData.append('name', name);
+        
+        const description = document.getElementById('file-description').value;
+        if (description) formData.append('description', description);
+        
+        const tags = document.getElementById('file-tags').value;
+        if (tags) formData.append('tags', tags);
+        
+        try {
+          toggleLoading(true);
+          
+          const response = await fetch(`${API_URL}/api/images/upload`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Upload failed');
+          }
+          
+          showMessage('Image uploaded successfully');
+          fileUploadForm.reset();
+          fetchImages();
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          toggleLoading(false);
+        }
+      });
+      
+      // URL upload form submit
+      urlUploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const imageUrl = document.getElementById('image-url').value;
+        const name = document.getElementById('url-name').value;
+        const description = document.getElementById('url-description').value;
+        const tags = document.getElementById('url-tags').value;
+        
+        try {
+          toggleLoading(true);
+          
+          const response = await fetch(`${API_URL}/api/images/url`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              imageUrl,
+              name,
+              description,
+              tags,
+            }),
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Upload failed');
+          }
+          
+          showMessage('Image uploaded successfully');
+          urlUploadForm.reset();
+          fetchImages();
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          toggleLoading(false);
+        }
+      });
+      
+      // Fetch images
+      async function fetchImages(page = 1) {
+        if (!token) return;
+        
+        try {
+          toggleLoading(true);
+          
+          const response = await fetch(`${API_URL}/api/images?page=${page}&limit=6`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Failed to fetch images');
+          }
+          
+          renderImages(data.data);
+          renderPagination(data.pagination);
+          
+          if (data.data.length > 0) {
+            imagesSection.classList.remove('hidden');
+          } else {
+            imagesSection.classList.add('hidden');
+          }
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          toggleLoading(false);
+        }
+      }
+      
+      // Render images
+      function renderImages(images) {
+        imagesContainer.innerHTML = '';
+        
+        images.forEach(image => {
+          const card = document.createElement('div');
+          card.className = 'image-card bg-white rounded-lg shadow-md overflow-hidden';
+          
+          card.innerHTML = `
+            <img src="${image.imageUrl}" alt="${image.name}" class="w-full h-48 object-cover">
+            <div class="p-4">
+              <h3 class="font-medium text-lg truncate">${image.name}</h3>
+              <p class="text-gray-600 text-sm mt-1 line-clamp-2">${image.description || ''}</p>
+              <div class="mt-2 flex flex-wrap gap-1">
+                ${image.tags.map(tag => `<span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">${tag}</span>`).join('')}
+              </div>
+              <div class="mt-3 flex justify-between items-center">
+                <span class="text-xs text-gray-500">${new Date(image.createdAt).toLocaleDateString()}</span>
+                <button class="delete-btn text-red-600 hover:text-red-800" data-id="${image._id}">Delete</button>
+              </div>
+            </div>
+          `;
+          
+          imagesContainer.appendChild(card);
+        });
+        
+        // Add delete event listeners
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async function() {
+            const id = this.getAttribute('data-id');
+            if (confirm('Are you sure you want to delete this image?')) {
+              await deleteImage(id);
+            }
+          });
+        });
+      }
+      
+      // Render pagination
+      function renderPagination(pagination) {
+        if (!pagination) return;
+        
+        paginationContainer.innerHTML = '';
+        currentPage = pagination.page;
+        
+        // Previous button
+        if (pagination.page > 1) {
+          const prevBtn = document.createElement('button');
+          prevBtn.className = 'px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300';
+          prevBtn.textContent = 'Previous';
+          prevBtn.addEventListener('click', () => fetchImages(pagination.page - 1));
+          paginationContainer.appendChild(prevBtn);
+        }
+        
+        // Page numbers
+        for (let i = 1; i <= pagination.pages; i++) {
+          const pageBtn = document.createElement('button');
+          pageBtn.className = `px-3 py-1 rounded-md ${i === pagination.page ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`;
+          pageBtn.textContent = i;
+          pageBtn.addEventListener('click', () => fetchImages(i));
+          paginationContainer.appendChild(pageBtn);
+        }
+        
+        // Next button
+        if (pagination.page < pagination.pages) {
+          const nextBtn = document.createElement('button');
+          nextBtn.className = 'px-3 py-1 bg-gray-200 rounded-md hover:bg-gray-300';
+          nextBtn.textContent = 'Next';
+          nextBtn.addEventListener('click', () => fetchImages(pagination.page + 1));
+          paginationContainer.appendChild(nextBtn);
+        }
+      }
+      
+      // Delete image
+      async function deleteImage(id) {
+        try {
+          toggleLoading(true);
+          
+          const response = await fetch(`${API_URL}/api/images/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.message || 'Failed to delete image');
+          }
+          
+          showMessage('Image deleted successfully');
+          fetchImages(currentPage);
+        } catch (error) {
+          showMessage(error.message, true);
+        } finally {
+          toggleLoading(false);
+        }
+      }
+      
+      // Drag and drop functionality
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        dropArea.classList.add('dragover');
+      }
+      
+      function unhighlight() {
+        dropArea.classList.remove('dragover');
+      }
+      
+      dropArea.addEventListener('drop', handleDrop, false);
+      
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+      }
+      
+      dropArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      // Initialize
+      checkAuth();
+    });
+  </script>
+</body>
+</html>
